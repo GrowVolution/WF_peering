@@ -1,0 +1,22 @@
+{
+  "id": "peering",
+  "version": "1.0",
+  "name": "Peering API",
+  "description": "Independent peers replicate, verify and checkpoint your app's integrity data, so nobody has to take the host's word for it.",
+  "authors": [
+    {
+      "name": "pierre",
+      "email": "pierre@growv-mail.org"
+    }
+  ],
+  "requires": {
+    "wf": ">=1.0.0b3",
+    "packages": [
+      "wf-peering"
+    ]
+  },
+  "type": "default",
+  "frontend": {
+    "type": "none"
+  }
+}

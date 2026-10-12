@@ -1,0 +1,17 @@
+[folders]
+.vscode/
+.idea/
+node_modules/
+translations/
+dist/
+keys/
+__pycache__/
+.pytest_cache/
+tests/
+
+[files]
+frontend/README.md
+frontend/_gitignore
+messages.pot
+tailwind.css
+_my_config.py
