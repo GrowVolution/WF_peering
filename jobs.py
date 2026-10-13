@@ -3,9 +3,9 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 
 def setup():
-    from wf_peering.services.settings import settings
-    from wf_peering.services.tasks import guarded
-    from ..services.aggregation import run
+    from wf_peering.settings import settings
+    from wf_peering.jobs import guarded
+    from .utils.aggregation import run
 
     @guarded("integrity")
     async def integrity():

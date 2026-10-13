@@ -89,14 +89,14 @@ async def record(data) -> dict | None:
 
 
 async def publish(data) -> dict:
-    from ..services.aggregation import push
+    from ..utils.aggregation import push
     record = data.get("record") if isinstance(data, dict) else None
     try: return await push(record)
     except spec.IntegrityError as exc: raise ValueError(f"INTEGRITY_{exc}") from exc
 
 
 async def retract(data) -> dict:
-    from ..services.aggregation import retract as withdraw
+    from ..utils.aggregation import retract as withdraw
     if not isinstance(data, dict) or not isinstance(data.get("id"), str) or not isinstance(data.get("additive"), str):
         raise TypeError("Expected { id: str, additive: str }.")
     return { "id": data["id"], "retracted": await withdraw(data["additive"], data["id"]) }

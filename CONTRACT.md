@@ -64,8 +64,8 @@ are too many to report in every run.
 
 ```python
 await events.request("peering_artifact", { "record": {
-    "id": "ocean_release:…", "additive": "ocean", "type": "release", "hash": "…",
-    "version": "1.0.0", "served": False, "label": "additive demo 1.0.0", "extra": { … }
+    "id": "example_release:…", "additive": "example", "type": "release", "hash": "…",
+    "version": "1.0.0", "served": False, "label": "example 1.0.0", "extra": { … }
 } })
 # → { "id", "changed": bool, "fingerprint", "chain_length", "ledger_seq" }
 ```
@@ -176,3 +176,6 @@ Afterwards: the host pushes `{ "type": "entry" }` for every new ledger entry; th
 followed by a close: `INVALID_AUTH`, `STALE_AUTH`, `INVALID_SIGNATURE`, `PROTOCOL_MISMATCH`, `SELF_CONNECTION`,
 `TOO_MANY_PEERS`, `REGISTRATION_RATE`, `URL_CLAIMED_BY_OTHER_NODE`, `INVALID_URL`, `TOO_MANY_FAILURES`,
 `AUTH_TIMEOUT`. Four missed heartbeats close the connection. Inbound messages above 64 KiB are ignored.
+A peer that does not read its entries fast enough is disconnected (close code 1013, journal reason
+`BACKPRESSURE`) as soon as 1000 entries are waiting for it, instead of silently missing them; it
+reconnects and requests the gap with `range`.

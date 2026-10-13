@@ -26,7 +26,7 @@ def before_enable(fluid: Fluid):
             "The peering Additive needs the wf-peering extension: "
             "install it with `pip install wf-peering`."
         ) from exc
-    from .services.role import HostRole
+    from .utils.role import HostRole
     peering.expand_fluid(fluid, role=HostRole(), root=Path(__file__).resolve().parent)
 
     from .api import setup_v1, health
@@ -42,7 +42,7 @@ def before_enable(fluid: Fluid):
     from .events import setup as setup_events
     setup_events()
 
-    from wf_peering.services.settings import settings
+    from wf_peering.settings import settings
     if settings.schedule:
         from .jobs import setup as setup_jobs
         setup_jobs()

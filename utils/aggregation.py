@@ -8,7 +8,7 @@ from wf_peering.services.identity import NodeIdentity
 from wf_peering.services.integrity import Integrity
 from wf_peering.services.journal import Journal
 from wf_peering.services.ledger import Ledger, LedgerError
-from wf_peering.services.settings import settings
+from wf_peering.settings import settings
 
 
 def collector() -> str:

@@ -32,7 +32,7 @@ peer:     peering (app, no Additives)  ────────────┘
   signs with its node key. Peers replicate it and check every entry themselves.
 - **The peer endpoint** — `WS /peering/ws/peer`: a mutual, signed handshake, then live replication of new
   entries, heartbeats and range requests. Peers push their signed checkpoints back over the same socket.
-- **The host API** — the public, read-only peering API under `/peering/api/v1` (`/hash?id=users_e2ee`,
+- **The host API** — the public, read-only peering API under `/peering/api/v1` (`/hash?id=<artifact>`,
   ledger, proofs, checkpoints, peers, trust, conflicts), plus `GET /peers/connections`.
 - **A status page** at `/peering/` that reads only the public API, rendered in the request's locale
   (English and German, from `wf-peering`).
@@ -132,4 +132,4 @@ its public API.
 ## License
 
 This Additive has no license file yet. The shared code it runs on, `wf-peering`, is licensed under the
-GNU General Public License v3.0.
+[GNU General Public License v3.0](LICENSE).

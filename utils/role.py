@@ -6,8 +6,8 @@ from wf_peering import NodeRole, __version__
 from wf_peering.protocol.entries import utc_now
 from wf_peering.services.identity import NodeIdentity
 from wf_peering.services.ledger import Ledger
-from wf_peering.services.settings import settings
 from wf_peering.services.store import State
+from wf_peering.settings import settings
 
 
 class HostRole(NodeRole):

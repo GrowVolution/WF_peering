@@ -20,5 +20,4 @@ class DefaultConfig:
 
 
 @register_config()
-class Config(MyConfig, DefaultConfig):
-    pass
+class Config(MyConfig, DefaultConfig): pass

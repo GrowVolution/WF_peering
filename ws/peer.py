@@ -10,7 +10,7 @@ from wf_peering.services.identity import NodeIdentity
 from wf_peering.services.journal import Journal
 from wf_peering.services.ledger import Ledger
 from wf_peering.services.peers import Peers
-from wf_peering.services.settings import settings, PROTOCOL_VERSION, SCHEMA_VERSION
+from wf_peering.settings import settings, PROTOCOL_VERSION, SCHEMA_VERSION
 
 MAX_MESSAGE = 64 * 1024
 FAILURE_WINDOW = 600
@@ -103,10 +103,14 @@ async def handle_socket(websocket: WebSocket):
     await Journal.append("peering:peer-connected", { "node": node, "url": statement.get("url") })
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=1000)
+    stalled = { "value": False }
 
     def listener(entry: dict):
+        if stalled["value"]: return
         try: queue.put_nowait({ k: entry[k] for k in ("seq", "hash", "content", "signature") })
-        except asyncio.QueueFull: pass
+        except asyncio.QueueFull:
+            stalled["value"] = True
+            asyncio.ensure_future(websocket.close(code=1013))
 
     async def forward():
         while True:
@@ -150,7 +154,7 @@ async def handle_socket(websocket: WebSocket):
                 from wf_peering.services.checkpoints import Checkpoints
                 await Checkpoints.remember_remote(message, via="peer-push")
     except WebSocketDisconnect:
-        reason = "DISCONNECTED"
+        reason = "BACKPRESSURE" if stalled["value"] else "DISCONNECTED"
     except Exception as exc:
         reason = type(exc).__name__
         log_factory.exception(exc, f"[peering] The connection to peer {node} failed.")
