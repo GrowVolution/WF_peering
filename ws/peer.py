@@ -9,7 +9,7 @@ from wf_peering.protocol.signing import verify, fingerprint, valid_ed25519, b64e
 from wf_peering.services.identity import NodeIdentity
 from wf_peering.services.journal import Journal
 from wf_peering.services.ledger import Ledger
-from wf_peering.services.peers import Peers
+from wf_peering.services.peers import Peers, verify_claim
 from wf_peering.settings import settings, PROTOCOL_VERSION, SCHEMA_VERSION
 
 MAX_MESSAGE = 64 * 1024
@@ -93,7 +93,10 @@ async def handle_socket(websocket: WebSocket):
         return await _reject(websocket, address, "SELF_CONNECTION")
 
     node = statement["node"]
-    error, connection_id = await Peers.authenticated(node, key, str(statement.get("url") or ""), address)
+    url = str(statement.get("url") or "")
+    refusal = await verify_claim(url, node)
+    if refusal: return await _reject(websocket, address, refusal)
+    error, connection_id = await Peers.authenticated(node, key, url, address)
     if error: return await _reject(websocket, address, error)
 
     welcome = { "nonce": statement.get("nonce"), "node": node, "host": NodeIdentity.node_id(), "ts": entries.utc_now() }

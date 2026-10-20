@@ -169,13 +169,18 @@ answers from the replicated ledger (`"source": "host-ledger"`) and adds the peer
    signed with `wf-peer-hello-v1`.
 2. Peer → `{ "type": "auth", "statement": { node, key, url, challenge, nonce, ts, protocol, schema }, "signature" }`,
    signed with `wf-peer-auth-v1`. The challenge must match, the timestamp be fresh, the node id derive from the key.
+   The host then fetches `<url>/api/v1/node` itself and accepts the connection only when that address answers
+   with a signed statement of the same node for the same `url` — a peer cannot list an address it does not
+   serve, nor take over the row of another peer. A peer's public URL therefore has to be reachable from the
+   host.
 3. Host → `{ "type": "welcome", "statement": { nonce, node, host, ts }, "signature" }`, signed with `wf-peer-welcome-v1`.
 
 Afterwards: the host pushes `{ "type": "entry" }` for every new ledger entry; the peer sends `heartbeat`
 (with its head), `range` (`from`, `limit`) and `checkpoint` messages. Errors are `{ "type": "error", "code" }`
 followed by a close: `INVALID_AUTH`, `STALE_AUTH`, `INVALID_SIGNATURE`, `PROTOCOL_MISMATCH`, `SELF_CONNECTION`,
-`TOO_MANY_PEERS`, `REGISTRATION_RATE`, `URL_CLAIMED_BY_OTHER_NODE`, `INVALID_URL`, `TOO_MANY_FAILURES`,
-`AUTH_TIMEOUT`. Four missed heartbeats close the connection. Inbound messages above 64 KiB are ignored.
+`TOO_MANY_PEERS`, `REGISTRATION_RATE`, `URL_CLAIMED_BY_OTHER_NODE`, `INVALID_URL`, `URL_UNREACHABLE` (the
+claimed address did not answer with a valid node statement in time), `URL_NOT_VERIFIED` (it answered for
+another node), `TOO_MANY_FAILURES`, `AUTH_TIMEOUT`. Four missed heartbeats close the connection. Inbound messages above 64 KiB are ignored.
 A peer that does not read its entries fast enough is disconnected (close code 1013, journal reason
 `BACKPRESSURE`) as soon as 1000 entries are waiting for it, instead of silently missing them; it
 reconnects and requests the gap with `range`.
