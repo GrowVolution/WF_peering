@@ -1,5 +1,23 @@
 # Peering API — Contract
 
+<!-- index -->
+Read this file in parts. Each range is `first-last` as the file stands now — open one with the Read
+tool's `offset`/`limit`, or `sed -n 'first,lastp'`.
+
+- `29-41` **At a glance**
+- `42-150` **Events / Queries**
+  - `47-87` peering_integrity *(collector query, not singleton)*
+  - `88-110` peering_artifact *(query)*
+  - `111-116` peering_artifact:retract *(query)*
+  - `117-134` peering_record *(query)*
+  - `135-139` peering_hash *(query)*
+  - `140-143` peering_status *(query)*
+  - `144-150` peering_alert *(internal signal)*
+- `151-192` **API**
+  - `177-192` GET /peering/api/v1/hash?id=shop_checkout
+- `193-215` **Peer socket**
+<!-- /index -->
+
 The host side of the peering network. Everything here is a contract of the **host**: the event-bus
 integration for the host's other Additives, the peer socket, and the host API. Protocols, storage and the
 response formats come from the `wf-peering` extension; its README describes them in full.
@@ -7,6 +25,17 @@ response formats come from the `wf-peering` extension; its README describes them
 - API base: `/peering/api/v1` (peers serve the same read-only API under `/api/v1`)
 - Peer socket: `WS /peering/ws/peer`
 - Status page: `GET /peering/`
+
+## At a glance
+
+|                  |                                                                                                                                                                                                                                                                                 |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Mount            | REST under `/peering/api/v1`, peer socket `WS /peering/ws/peer`, status page `/peering/`                                                                                                                                                                                        |
+| Requires         | WebFluid `>=1.0.0rc1`; package `wf-peering` (protocol, ledger, node identity); extensions `sqlalchemy`, `events`, `scheduling`, `babel`                                                                                                                                          |
+| Config           | `PEERING_PUBLIC_URL`, `PEERING_KEY_FILE`, `PEERING_PEERS`, `PEERING_ALLOW_INSECURE`, `PEERING_MAX_PEERS`, `PEERING_PEER_INACTIVE_DAYS`, `PEERING_REGISTRATIONS_PER_HOUR`, `PEERING_SCHEDULE`, `PEERING_CHECKPOINT_TIME`, `PEERING_INTEGRITY_INTERVAL`, `PEERING_MODELS_DB_BIND` |
+| Emits            | `peering_alert` (internal)                                                                                                                                                                                                                                                      |
+| Provides         | `peering_artifact`, `peering_artifact:retract`, `peering_record`, `peering_hash`, `peering_status`                                                                                                                                                                              |
+| Extension points | `peering_integrity` (collector: report the artifacts you serve)                                                                                                                                                                                                                 |
 
 ---
 
@@ -24,7 +53,7 @@ events.query("peering_integrity", False)(provide)
 
 async def provide(data: dict) -> list[dict]:
     # data = { "run": str, "node": str, "role": "host", "reason": "scheduled" | "startup" | … }
-    return [ { "id": "users_e2ee", "hash": "…", … } ]
+    return [ { "id": "shop_checkout", "hash": "…", … } ]
 ```
 
 `events.request("peering_integrity", …)` returns a **list of lists**: one list per provider, so the origin of
@@ -33,20 +62,20 @@ reported as `failed` or `invalid`, and its previously known artifacts are **not*
 
 A record is a dictionary; only `id` and `hash` are required, everything else is optional and kept:
 
-| Field                              | Type        | Meaning                                                                    |
-|------------------------------------|-------------|----------------------------------------------------------------------------|
-| `id`                               | str         | Artifact id, `^[a-z0-9][a-z0-9_.:-]{1,127}$`, unique across providers.      |
-| `hash`                             | hex str     | The digest, lower case.                                                    |
-| `algorithm`                        | str         | `sha256` (default), `sha384`, `sha512`.                                    |
-| `additive`                         | str         | The providing Additive; defaults to the provider's group.                   |
-| `type`, `label`, `parent`          | str         | Free classification, human label, enclosing artifact.                      |
-| `version`, `served_version`, `latest_version` | str | What the host has, serves, and what the reference calls latest.     |
-| `url`                              | str         | Host-relative path where the artifact is publicly served (`/…`).           |
-| `served`                           | bool        | Whether the host actually serves it.                                       |
-| `size`                             | int         | Byte size.                                                                 |
-| `computed_at`                      | str         | `YYYY-MM-DDTHH:MM:SSZ`; excluded from the record's fingerprint.            |
-| `provenance`                       | object      | `{ "status": "unsigned" | "signed" | "reference-match" | "reference-mismatch" | "reference-unavailable" | "unknown", … }` |
-| `reference`, `context`, `extra`    | object      | Type-specific data (reference repository, commit, generator state, …).     |
+| Field                                         | Type    | Meaning                                                                |
+|-----------------------------------------------|---------|------------------------------------------------------------------------|
+| `id`                                          | str     | Artifact id, `^[a-z0-9][a-z0-9_.:-]{1,127}$`, unique across providers. |
+| `hash`                                        | hex str | The digest, lower case.                                                |
+| `algorithm`                                   | str     | `sha256` (default), `sha384`, `sha512`.                                |
+| `additive`                                    | str     | The providing Additive; defaults to the provider's group.              |
+| `type`, `label`, `parent`                     | str     | Free classification, human label, enclosing artifact.                  |
+| `version`, `served_version`, `latest_version` | str     | What the host has, serves, and what the reference calls latest.        |
+| `url`                                         | str     | Host-relative path where the artifact is publicly served (`/…`).       |
+| `served`                                      | bool    | Whether the host actually serves it.                                   |
+| `size`                                        | int     | Byte size.                                                             |
+| `computed_at`                                 | str     | `YYYY-MM-DDTHH:MM:SSZ`; excluded from the record's fingerprint.        |
+| `provenance`                                  | object  | `{ "status": "unsigned"                                                | "signed" | "reference-match" | "reference-mismatch" | "reference-unavailable" | "unknown", … }` |
+| `reference`, `context`, `extra`               | object  | Type-specific data (reference repository, commit, generator state, …). |
 
 At most 256 records per provider and 16 KiB per record. Each run stores what changed (a hash chain per
 artifact: every new record points to the fingerprint of the previous one), records artifacts that
@@ -87,12 +116,12 @@ the current record can retract it; anything else answers `retracted: false`.
 
 ## peering_record *(query)*
 
-Appends an entry to the host's signed ledger. Used by `auth` and `users` (through their outboxes) for key
+Appends an entry to the host's signed ledger. Additives use it, typically through an outbox, for key
 statements and signed actions.
 
 ```python
 await events.request("peering_record", {
-    "kind": "auth:keylog", "source": "auth", "body": { … },
+    "kind": "shop:order", "source": "shop", "body": { … },
     "subject": "a1.…", "ref": "unique-idempotency-key", "auth": { … }
 })
 # → { "seq": int, "hash": str, "verification": { … } } or { "seq", "hash", "duplicate": True }
@@ -105,7 +134,7 @@ raising — callers keep their outbox entry and retry.
 
 ## peering_hash *(query)*
 
-`{ "id": "users_e2ee" }` → the current record of one artifact with `chain_length`, `confirmed_at`,
+`{ "id": "shop_checkout" }` → the current record of one artifact with `chain_length`, `confirmed_at`,
 `missing_since` and `ledger_seq`, or `None`.
 
 ## peering_status *(query)*
@@ -124,32 +153,32 @@ Triggered for every newly recorded conflict: `{ kind, severity, subject, summary
 All routes are `GET`, public, rate limited, answer JSON with `Access-Control-Allow-Origin: *` and
 `Cache-Control: no-store`. The handlers and formats are those of `wf-peering`; this table only lists them.
 
-| Route                                     | Rate      |
-|-------------------------------------------|-----------|
-| `/node`, `/status`                        | 120/min   |
-| `/uptime`                                 | 60/min    |
+| Route                                                             | Rate    |
+|-------------------------------------------------------------------|---------|
+| `/node`, `/status`                                                | 120/min |
+| `/uptime`                                                         | 60/min  |
 | `/ledger`, `/ledger/root`, `/ledger/proof`, `/ledger/consistency` | 120/min |
-| `/ledger/head`                            | 240/min   |
-| `/journal`                                | 60/min    |
-| `/accounts/{handle}`                      | 120/min   |
-| `/integrity`                              | 120/min   |
-| `/hash?id=`                               | 240/min   |
-| `/integrity/history?id=`                  | 60/min    |
-| `/peers`                                  | 120/min   |
-| `/peers/connections` *(host only)*        | 60/min    |
-| `/checkpoints`                            | 120/min   |
-| `/checkpoints/latest`                     | 240/min   |
-| `/checkpoints/peers`, `/checkpoints/agreement` | 60/min |
-| `/trust`                                  | 120/min   |
-| `/trust/history`, `/conflicts`            | 60/min    |
+| `/ledger/head`                                                    | 240/min |
+| `/journal`                                                        | 60/min  |
+| `/accounts/{handle}`                                              | 120/min |
+| `/integrity`                                                      | 120/min |
+| `/hash?id=`                                                       | 240/min |
+| `/integrity/history?id=`                                          | 60/min  |
+| `/peers`                                                          | 120/min |
+| `/peers/connections` *(host only)*                                | 60/min  |
+| `/checkpoints`                                                    | 120/min |
+| `/checkpoints/latest`                                             | 240/min |
+| `/checkpoints/peers`, `/checkpoints/agreement`                    | 60/min  |
+| `/trust`                                                          | 120/min |
+| `/trust/history`, `/conflicts`                                    | 60/min  |
 
 `GET /peering/api/health` answers `{ "status": "ok", "timestamp": … }`.
 
-### GET /peering/api/v1/hash?id=users_e2ee
+### GET /peering/api/v1/hash?id=shop_checkout
 
 ```json
 {
-  "id": "users_e2ee", "algorithm": "sha256", "hash": "…",
+  "id": "shop_checkout", "algorithm": "sha256", "hash": "…",
   "version": "v1", "served_version": "v1", "latest_version": "v1",
   "chain_length": 1, "confirmed_at": "…Z", "missing_since": null, "ledger_seq": 5,
   "record": { … }, "source": "providers"

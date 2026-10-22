@@ -13,10 +13,15 @@ other Additives take part, and it serves the peers. The peer itself is a separat
 verification through the **`wf-peering`** extension.
 
 ```
-host app: auth · users · … · peering (Additive)  ──┐
+host app: your Additives · peering (Additive)  ────┐
                                                    ├── wf-peering (extension)
 peer:     peering (app, no Additives)  ────────────┘
 ```
+
+Integrity checks are the kind of feature every security-minded project wants and almost none
+builds, because doing it properly needs independent infrastructure. Here it is a component you
+enable: your Additives report what they serve, peers that anyone can run watch it, and clients ask
+them instead of trusting the host alone.
 
 ---
 
@@ -74,20 +79,20 @@ Run the migration cycle once: the tables (`peering_*`) are exposed to `wf migrat
 
 ## Configuration
 
-The host-relevant keys, with defaults in `config.py`; the extension's README lists them all.
+The host-relevant keys, with defaults in `config.py`; the extension's `CONTRACT.md` lists them all.
 
-| Key                              | Default         | Meaning                                                                 |
-|----------------------------------|-----------------|-------------------------------------------------------------------------|
-| `PEERING_PUBLIC_URL`             | `BASE_URL`      | The host's public origin. Keep it the address browsers and apps use.    |
-| `PEERING_KEY_FILE`               | `keys/node.key` | The host's node key, relative to this Additive (gitignored, mode 0600). |
-| `PEERING_NODE_KEY`               | env             | The key itself instead of a file.                                       |
-| `PEERING_PEERS`                  | `[]`            | Peers the host checks even if they never connected.                     |
-| `PEERING_MAX_PEERS`              | `64`            | Connected and known peers at most.                                      |
-| `PEERING_PEER_INACTIVE_DAYS`     | `30`            | Days without contact until a peer leaves the statistics; `0` keeps it.  |
-| `PEERING_REGISTRATIONS_PER_HOUR` | `20`            | New peers accepted per hour.                                            |
-| `PEERING_CHECKPOINT_TIME`        | `(0, 0)`        | The daily checkpoint, UTC.                                              |
-| `PEERING_INTEGRITY_INTERVAL`     | `900`           | Seconds between integrity collections.                                  |
-| `PEERING_SCHEDULE`               | `True`          | Turns the jobs off.                                                     |
+| Key                              | Default         | Meaning                                                                   |
+|----------------------------------|-----------------|---------------------------------------------------------------------------|
+| `PEERING_PUBLIC_URL`             | `BASE_URL`      | The host's public origin. Keep it the address browsers and apps use.      |
+| `PEERING_KEY_FILE`               | `keys/node.key` | The host's node key, relative to this Additive (gitignored, mode 0600).   |
+| `PEERING_NODE_KEY`               | env             | The key itself instead of a file.                                         |
+| `PEERING_PEERS`                  | `[]`            | Peers the host checks even if they never connected.                       |
+| `PEERING_MAX_PEERS`              | `64`            | Connected and known peers at most.                                        |
+| `PEERING_PEER_INACTIVE_DAYS`     | `30`            | Days without contact until a peer leaves the statistics; `0` keeps it.    |
+| `PEERING_REGISTRATIONS_PER_HOUR` | `20`            | New peers accepted per hour.                                              |
+| `PEERING_CHECKPOINT_TIME`        | `(0, 0)`        | The daily checkpoint, UTC.                                                |
+| `PEERING_INTEGRITY_INTERVAL`     | `900`           | Seconds between integrity collections.                                    |
+| `PEERING_SCHEDULE`               | `True`          | Turns the jobs off.                                                       |
 | `PEERING_ALLOW_INSECURE`         | `False`         | `http` and local addresses, for development only. Implied by `wf run -d`. |
 
 `PEERING_ROLE` no longer exists: the Additive is always the host and ignores the key with a warning.
@@ -112,8 +117,16 @@ rewrites, truncates or forks its history, serves a script that differs from its 
 user's keys without the user's proof is caught and recorded with the signed evidence.
 
 They cannot see what the host's server does internally, and a host that lies the same way to everyone
-from the start can only be caught by an independent reference (such as the published integrity
-repository of the users Additive). A clean result means agreement, not a guarantee.
+from the start can only be caught by an independent reference (such as an integrity repository the
+maintainer of an Additive publishes). A clean result means agreement, not a guarantee.
+
+---
+
+## For developers and agents
+
+- [CONTRACT.md](CONTRACT.md) — the event-bus and API contract of the host side
+- [.agents/SKILL.md](.agents/SKILL.md) — what a coding agent needs to use it correctly
+- The protocol itself is described by the `wf-peering` extension
 
 ---
 
@@ -123,13 +136,17 @@ repository of the users Additive). A clean result means agreement, not a guarant
 cd additives/peering && pytest tests
 ```
 
-They build a temporary host app with this Additive and run against the installed `wf-peering`. The
-tests of `auth` and `users` include this Additive too and talk to it only through its event contracts and
-its public API.
+They build a temporary host app with this Additive and run against the installed `wf-peering`. An
+Additive that integrates it can include it in its own tests the same way, talking to it only through its
+event contracts and its public API.
 
 ---
 
 ## License
 
-This Additive has no license file yet. The shared code it runs on, `wf-peering`, is licensed under the
+The Peering API and the shared code it runs on, `wf-peering`, are licensed under the
 [GNU General Public License v3.0](LICENSE).
+
+## Guide
+
+[DOCS.md](DOCS.md) explains setup, operation and troubleshooting.

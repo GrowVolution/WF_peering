@@ -10,7 +10,7 @@
     }
   ],
   "requires": {
-    "wf": ">=1.0.0b3",
+    "wf": ">=1.0.0rc1",
     "packages": [
       "wf-peering"
     ]
